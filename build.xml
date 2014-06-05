@@ -1,0 +1,75 @@
+<?xml version="1.0"?>
+
+<project name="Alfresco Jasypt Encryption Amp" default="package-amp" basedir=".">
+    <property name="project.dir" value="."/>
+    <property name="build.dir" value="${project.dir}/build"/>
+    <property name="config.dir" value="${project.dir}/config"/>
+    <property name="amp.file" value="${build.dir}/dist/alfresco-jasypt.amp"/>
+    <property name="distro.file" value="${build.dir}/dist/alfresco-jasypt.zip"/>
+    
+    <target name="mkdirs">
+        <mkdir dir="${build.dir}/dist" />
+        <mkdir dir="${build.dir}/lib" />
+        <mkdir dir="${build.dir}/licenses" />
+    	  <mkdir dir="${build.dir}/extension" />
+    </target>
+    
+    <path id="class.path">
+        <dirset dir="${build.dir}" />
+        <fileset dir="../../lib/server" includes="**/*.jar"/>
+    </path>
+  
+    <target name="clean">
+        <delete dir="${build.dir}/dist"/>
+        <delete dir="${build.dir}/lib" />
+        <delete dir="${build.dir}/classes"/>
+    </target>
+  
+    <target name="compile">
+        <mkdir dir="${build.dir}/classes" />
+        <javac classpathref="class.path" srcdir="${project.dir}/source/java" destdir="${build.dir}/classes" />
+    </target>
+    
+    <target name="package-jar" depends="compile">
+        <jar destfile="${jar.file}" >
+            <fileset dir="${build.dir}/classes" excludes="**/custom*,**/*Test*" includes="**/*.class" />
+        </jar>
+    </target>
+  
+    <target name="package-3rd-party" depends="mkdirs" description="Copies 3rd party libraries and licenses to Build" >
+        <copy todir="${build.dir}/lib">
+            <fileset dir="lib"/>
+        </copy>
+        <copy todir="${build.dir}/licenses">
+            <fileset dir="licenses"/>
+        </copy>
+    </target>
+  
+    <target name="package-amp" depends="mkdirs, package-3rd-party" description="Package the Module" >
+        <zip destfile="${amp.file}" >
+            <fileset dir="${project.dir}/build" includes="lib/*.jar, licenses/*.*" />
+            <fileset dir="${project.dir}" includes="config/**/*.*" excludes="**/module.properties" />
+            <fileset dir="${project.dir}/config/alfresco/module/jasypt-encryption" includes="module.properties" />
+        </zip>
+    </target>
+
+	  <target name="package-distro" depends="package-amp" description="Package the distribution which includes sample extensions" >
+	  	  <copy todir="${build.dir}/extension">
+	  	      <fileset dir="extension"/>
+	  	  </copy>
+	  	  <zip destfile="${distro.file}" >
+	  	      <file file="${project.dir}/build/dist/alfresco-jasypt.amp" />
+	  	      <fileset dir="${project.dir}/build" includes="extension/*"/>
+	  	  	  <file file="${project.dir}/README.txt" />
+	  	  </zip>
+	  </target>
+	
+    <target name="update-war" depends="package-amp" description="Update the WAR file.  Set -Dwar.file=..." >
+        <echo>Installing Alfresco Jasypt Encryption AMP</echo>
+        <java dir="." fork="true" classname="org.alfresco.repo.module.tool.ModuleManagementTool">
+            <classpath refid="class.path" />
+            <arg line="install ${amp.file} ${war.file} -force -verbose"/>
+        </java>
+    </target>
+
+</project>
